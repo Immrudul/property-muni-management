@@ -12,13 +12,17 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await auth?.login(username, password);
-      navigate("/home"); // Redirect to Home on successful login
-    } catch (err) {
-      setError("Invalid username or password.");
+    
+    // Call login function and check the response
+    const success = await auth?.login(username, password);
+    
+    if (success) {
+      navigate("/home"); // Redirect on successful login
+    } else {
+      setError("Invalid username or password."); // Show error if login fails
     }
   };
+  
 
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
