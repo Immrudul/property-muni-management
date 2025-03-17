@@ -7,7 +7,11 @@ interface AuthContextType {
   logout: () => void;
 }
 
-export const AuthContext = createContext<AuthContextType | null>(null);
+export const AuthContext = createContext<AuthContextType>({
+  token: null,
+  login: async () => {},
+  logout: () => {},
+});
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
@@ -23,7 +27,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username: string, password: string) => {
     try {
       const response = await axios.post("http://127.0.0.1:8000/api/token/", { username, password });
-      setToken(response.data.access);
+      const accessToken = response.data.access;
+      setToken(accessToken);
+      localStorage.setItem("token", accessToken); // ✅ Store token in localStorage
     } catch (error) {
       console.error("Login failed", error);
     }
@@ -31,6 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setToken(null);
+    localStorage.removeItem("token"); // ✅ Ensure token is cleared from localStorage
   };
 
   return (
