@@ -8,7 +8,7 @@ class MunicipalitySerializer(serializers.ModelSerializer):
 
 class PropertySerializer(serializers.ModelSerializer):
     property_tax = serializers.SerializerMethodField()
-
+    municipal = MunicipalitySerializer()
     class Meta:
         model = Property
         fields = ['assessment_roll_number', 'assessment_value', 'municipal', 'property_tax']
