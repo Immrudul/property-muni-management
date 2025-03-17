@@ -13,7 +13,13 @@ const Home = () => {
 
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h2>Welcome to the Home Page!</h2>
+      <h2>Welcome!</h2>
+      <button onClick={() => navigate("/municipalities")}>
+        Take me to Municipalities!
+      </button>
+      <button onClick={() => navigate("/properties")}>
+        Take me to Properties!
+      </button>
       <button onClick={auth.logout}>Logout</button>
     </div>
   );
