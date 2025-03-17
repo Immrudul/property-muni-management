@@ -149,12 +149,8 @@ const Properties: React.FC = () => {
                     <tr className="bg-gray-50">
                       <td colSpan={4} className="py-4 px-6 text-gray-700">
                         <div className="flex flex-col space-y-2">
-                          <p className="font-semibold text-gray-900">
-                            Additional Info for {property.assessment_roll_number}
-                          </p>
-                          <p>Assessment Value: ${property.assessment_value.toLocaleString()}</p>
-                          <p>Municipality: {property.municipal.municipal_name} (ID: {property.municipal.municipal_id})</p>
-                          <p>Details: {property.details || "No additional details available."}</p>
+                          <p className="font-semibold text-gray-900">Municipality:</p>
+                          <p>{property.municipal.municipal_name} (ID: {property.municipal.municipal_id})</p>
                         </div>
                       </td>
                     </tr>
