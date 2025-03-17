@@ -8,9 +8,10 @@ class Municipality(models.Model):
 
     def __str__(self):
         return self.municipal_name
-    
+
 class Property(models.Model):
-    assessment_roll_number = models.CharField(max_length=50, primary_key=True)
+    id = models.AutoField(primary_key=True)  # New AutoField ID
+    assessment_roll_number = models.CharField(max_length=50, unique=True)  # Remove primary_key
     assessment_value = models.IntegerField()
     municipal = models.ForeignKey(Municipality, on_delete=models.CASCADE)
 
@@ -19,4 +20,3 @@ class Property(models.Model):
 
     def __str__(self):
         return f"{self.assessment_roll_number} - {self.municipal.municipal_name}"
-

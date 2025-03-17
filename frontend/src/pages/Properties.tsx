@@ -56,6 +56,16 @@ const Properties: React.FC = () => {
     });
   };
 
+  const handleEdit = (assessmentRollNumber: string) => {
+    console.log(`Edit property: ${assessmentRollNumber}`);
+    // Navigate to edit form or open a modal
+  };
+  
+  const handleDelete = async (assessmentRollNumber: string) => {
+    console.log(`Edit property: ${assessmentRollNumber}`);
+  };
+  
+
   return (
     <div className="p-6 bg-blue-100 min-h-screen">
       <div className="bg-white shadow-lg rounded-lg p-6">
@@ -100,6 +110,7 @@ const Properties: React.FC = () => {
                 <th className="py-3 px-4 text-left">Assessment Roll Number</th>
                 <th className="py-3 px-4 text-left">Assessment Value</th>
                 <th className="py-3 px-4 text-left">Municipality</th>
+                <th className="py-3 px-4 text-left">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -139,8 +150,20 @@ const Properties: React.FC = () => {
                     </td>
                     <td className="py-3 px-4">{property.assessment_roll_number}</td>
                     <td className="py-3 px-4">${property.assessment_value.toLocaleString()}</td>
-                    <td className="py-3 px-4">
-                      {property.municipal.municipal_name} (ID: {property.municipal.municipal_id})
+                    <td className="py-3 px-4">{property.municipal.municipal_name} (ID: {property.municipal.municipal_id})</td>
+                    <td className="py-3 px-4 flex space-x-2">
+                      <button
+                        onClick={() => handleEdit(property.assessment_roll_number)}
+                        className="bg-yellow-500 text-white px-3 py-1 rounded-md hover:bg-yellow-600 transition"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(property.assessment_roll_number)}
+                        className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 transition"
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
 

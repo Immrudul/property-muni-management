@@ -13,3 +13,4 @@ class PropertyViewSet(viewsets.ModelViewSet):
     serializer_class = PropertySerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['municipal']  # Allow filtering by municipal ID
+    lookup_field = 'id'  # Use `id` instead of `assessment_roll_number`
