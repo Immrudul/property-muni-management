@@ -10,10 +10,17 @@ interface Municipality {
   education_rate: number;
 }
 
+interface Property {
+  assessment_roll_number: string;
+  assessment_value: number;
+  property_tax: number;
+}
+
 const Municipalities: React.FC = () => {
   const navigate = useNavigate();
   const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
   const [expandedRows, setExpandedRows] = useState<number[]>([]); // Store expanded rows
+  const [propertyData, setPropertyData] = useState<{ [key: number]: Property[] }>({});
   const auth = useContext(AuthContext);
 
   useEffect(() => {
@@ -45,9 +52,42 @@ const Municipalities: React.FC = () => {
 
   // Toggle row expansion
   const toggleExpand = (id: number) => {
-    setExpandedRows((prev) =>
-      prev.includes(id) ? prev.filter((row) => row !== id) : [...prev, id]
-    );
+    setExpandedRows((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((row) => row !== id);
+      } else {
+        if (!propertyData[id]) {
+          fetchProperties(id); // Fetch properties only if not already fetched
+        }
+        return [...prev, id];
+      }
+    });
+  };
+
+  const fetchProperties = async (municipal_id: number) => {
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/property-assessment/properties/?municipal=${municipal_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+  
+      if (!response.ok) {
+        throw new Error("Failed to fetch properties");
+      }
+  
+      const data: Property[] = await response.json();
+      setPropertyData((prev) => ({
+        ...prev,
+        [municipal_id]: data,
+      }));
+    } catch (error) {
+      console.error(`Error fetching properties for municipality ${municipal_id}:`, error);
+    }
   };
 
   return (
@@ -63,7 +103,7 @@ const Municipalities: React.FC = () => {
               Go to Properties
             </button>
             <button
-              onClick={() => navigate("/home")} // ✅ Navigate to home or another route
+              onClick={() => navigate("/home")}
               className="pl-4 pr-4 bg-blue-500 text-white font-semibold py-2 rounded-md hover:bg-blue-600 transition flex items-center justify-center"
             >
               <svg
@@ -140,11 +180,34 @@ const Municipalities: React.FC = () => {
                       <td colSpan={5} className="py-4 px-6 text-gray-700">
                         <div className="flex flex-col space-y-2">
                           <p className="font-semibold text-gray-900">
-                            Additional Info for {municipality.municipal_name}
+                            Properties in {municipality.municipal_name}
                           </p>
-                          <p>Municipal Rate: {municipality.municipal_rate}</p>
-                          <p>Education Rate: {municipality.education_rate}</p>
-                          <p>ID: {municipality.municipal_id}</p>
+                          {propertyData[municipality.municipal_id] ? (
+                            propertyData[municipality.municipal_id].length > 0 ? (
+                              <table className="min-w-full border border-gray-300 rounded-lg mt-2">
+                                <thead className="bg-gray-100">
+                                  <tr>
+                                    <th className="py-2 px-4 text-left">Roll Number</th>
+                                    <th className="py-2 px-4 text-left">Assessment Value</th>
+                                    <th className="py-2 px-4 text-left">Property Tax</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {propertyData[municipality.municipal_id].map((property) => (
+                                    <tr key={property.assessment_roll_number} className="border-t">
+                                      <td className="py-2 px-4">{property.assessment_roll_number}</td>
+                                      <td className="py-2 px-4">{property.assessment_value}</td>
+                                      <td className="py-2 px-4">{property.property_tax.toFixed(2)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            ) : (
+                              <p className="text-gray-700">No properties associated with this municipality.</p>
+                            )
+                          ) : (
+                            <p>Loading properties...</p>
+                          )}
                         </div>
                       </td>
                     </tr>
