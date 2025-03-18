@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import { Modal, Form, Input, InputNumber, Button } from "antd";
+
 
 // Define TypeScript interface for a Municipality
 interface Municipality {
@@ -22,6 +24,10 @@ const Municipalities: React.FC = () => {
   const [expandedRows, setExpandedRows] = useState<number[]>([]); // Store expanded rows
   const [propertyData, setPropertyData] = useState<{ [key: number]: Property[] }>({});
   const auth = useContext(AuthContext);
+
+  const [editingMunicipality, setEditingMunicipality] = useState<Municipality | null>(null);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [form] = Form.useForm();
 
   useEffect(() => {
     const fetchMunicipalities = async () => {
@@ -90,8 +96,188 @@ const Municipalities: React.FC = () => {
     }
   };
 
+  const handleEditMunicipality = (municipality: Municipality) => {
+    setEditingMunicipality(municipality);
+    form.setFieldsValue(municipality);
+    setIsEditModalVisible(true);
+  };
+
+  const handleUpdateMunicipality = async (values: Municipality) => {
+    if (!editingMunicipality) return;
+  
+    try {
+      // Fetch all municipalities to check for duplicate names
+      const response = await fetch(
+        "http://127.0.0.1:8000/property-assessment/municipalities/",
+        {
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+  
+      if (!response.ok) {
+        throw new Error("Failed to fetch municipalities for validation");
+      }
+  
+      const allMunicipalities: Municipality[] = await response.json();
+  
+      // Check if the new name already exists (excluding the currently edited municipality)
+      const isDuplicate = allMunicipalities.some(
+        (municipality) =>
+          municipality.municipal_name.trim().toLowerCase() ===
+            values.municipal_name.trim().toLowerCase() &&
+          municipality.municipal_id !== editingMunicipality.municipal_id
+      );
+  
+      if (isDuplicate) {
+        alert("Municipality name already exists! Please choose a different name.");
+        return;
+      }
+  
+      // Proceed with updating if the name is unique
+      const updateResponse = await fetch(
+        `http://127.0.0.1:8000/property-assessment/municipalities/${editingMunicipality.municipal_id}/`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(values),
+        }
+      );
+  
+      if (!updateResponse.ok) {
+        throw new Error("Failed to update municipality");
+      }
+  
+      // Update local state to reflect the changes
+      setMunicipalities((prev) =>
+        prev.map((municipality) =>
+          municipality.municipal_id === editingMunicipality.municipal_id
+            ? { ...municipality, ...values }
+            : municipality
+        )
+      );
+  
+      setIsEditModalVisible(false);
+      alert("Municipality updated successfully!");
+    } catch (error) {
+      console.error("Error updating municipality:", error);
+      alert("Failed to update municipality.");
+    }
+  };
+  
+  const handleDeleteMunicipality = async (municipalId: number) => {
+    try {
+      // Fetch properties for the municipality
+      const response = await fetch(
+        `http://127.0.0.1:8000/property-assessment/properties/?municipal=${municipalId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+  
+      if (!response.ok) {
+        throw new Error("Failed to fetch properties");
+      }
+  
+      const properties: Property[] = await response.json();
+  
+      // Format property details for the confirmation message
+      const propertyDetails =
+        properties.length > 0
+          ? properties
+              .map(
+                (property) =>
+                  `• Roll Number: ${property.assessment_roll_number}, Value: ${property.assessment_value}, Tax: ${property.property_tax}`
+              )
+              .join("\n")
+          : "No associated properties.";
+  
+      // Show confirmation alert with property details
+      const confirmDelete = window.confirm(
+        `Are you sure you want to delete this municipality? The following properties will also be deleted:\n\n${propertyDetails}`
+      );
+  
+      if (!confirmDelete) {
+        return;
+      }
+  
+      // Proceed with municipality deletion
+      const deleteResponse = await fetch(
+        `http://127.0.0.1:8000/property-assessment/municipalities/${municipalId}/`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+  
+      if (!deleteResponse.ok) {
+        throw new Error("Failed to delete municipality");
+      }
+  
+      // Remove deleted municipality from state
+      setMunicipalities((prev) =>
+        prev.filter((municipality) => municipality.municipal_id !== municipalId)
+      );
+  
+      alert("Municipality deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting municipality:", error);
+      alert("Failed to delete municipality.");
+    }
+  };
+
   return (
     <div className="p-6 bg-blue-100 min-h-screen">
+      <Modal
+        title="Edit Municipality"
+        open={isEditModalVisible}
+        onCancel={() => setIsEditModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setIsEditModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button key="submit" type="primary" onClick={() => form.submit()}>
+            Save Changes
+          </Button>,
+        ]}
+      >
+        <Form form={form} layout="vertical" onFinish={handleUpdateMunicipality}>
+          <Form.Item
+            label="Municipal Name"
+            name="municipal_name"
+            rules={[{ required: true, message: "Please enter the municipal name" }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item
+            label="Municipal Rate"
+            name="municipal_rate"
+            rules={[{ required: true, message: "Please enter the municipal rate" }]}
+          >
+            <InputNumber min={0} step={0.01} style={{ width: "100%" }} />
+          </Form.Item>
+
+          <Form.Item
+            label="Education Rate"
+            name="education_rate"
+            rules={[{ required: true, message: "Please enter the education rate" }]}
+          >
+            <InputNumber min={0} step={0.01} style={{ width: "100%" }} />
+          </Form.Item>
+        </Form>
+      </Modal>
       <div className="bg-white shadow-lg rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Municipalities</h2>
@@ -131,6 +317,7 @@ const Municipalities: React.FC = () => {
                 <th className="py-3 px-4 text-left">Name</th>
                 <th className="py-3 px-4 text-left">Municipal Rate</th>
                 <th className="py-3 px-4 text-left">Education Rate</th>
+                <th className="py-3 px-4 text-left">Actions</th> {/* Added Actions Column */}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -172,6 +359,20 @@ const Municipalities: React.FC = () => {
                     <td className="py-3 px-4">{municipality.municipal_name}</td>
                     <td className="py-3 px-4">{municipality.municipal_rate}</td>
                     <td className="py-3 px-4">{municipality.education_rate}</td>
+                    <td className="py-3 px-4 flex space-x-2"> {/* Actions Column */}
+                      <button
+                        onClick={() => handleEditMunicipality(municipality)}
+                        className="bg-yellow-500 text-white px-3 py-1 rounded-md hover:bg-yellow-600 transition"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteMunicipality(municipality.municipal_id)}
+                        className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 transition"
+                      >
+                        Delete
+                      </button>
+                    </td>
                   </tr>
 
                   {/* Expanded Row */}
