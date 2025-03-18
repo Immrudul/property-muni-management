@@ -20,7 +20,7 @@ class PropertyResource(resources.ModelResource):
 
     class Meta:
         model = Property
-        fields = ('assessment_roll_number', 'assessment_value', 'municipal')
+        fields = ('id', 'assessment_roll_number', 'assessment_value', 'municipal')
         import_id_fields = ('assessment_roll_number',)
 
     def before_import_row(self, row, **kwargs):
