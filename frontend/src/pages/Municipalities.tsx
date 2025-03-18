@@ -29,6 +29,9 @@ const Municipalities: React.FC = () => {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [form] = Form.useForm();
 
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [addForm] = Form.useForm();
+
   useEffect(() => {
     const fetchMunicipalities = async () => {
       try {
@@ -237,8 +240,112 @@ const Municipalities: React.FC = () => {
     }
   };
 
+  const handleAddMunicipality = async (values: Municipality) => {
+    try {
+      // Fetch all municipalities to check for duplicate names
+      const response = await fetch(
+        "http://127.0.0.1:8000/property-assessment/municipalities/",
+        {
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+  
+      if (!response.ok) {
+        throw new Error("Failed to fetch municipalities for validation");
+      }
+  
+      const allMunicipalities: Municipality[] = await response.json();
+  
+      // Check if the name already exists
+      const isDuplicate = allMunicipalities.some(
+        (municipality) =>
+          municipality.municipal_name.trim().toLowerCase() ===
+          values.municipal_name.trim().toLowerCase()
+      );
+  
+      if (isDuplicate) {
+        alert("Municipality name already exists! Please choose a different name.");
+        return;
+      }
+  
+      // Proceed with adding the municipality
+      const createResponse = await fetch(
+        "http://127.0.0.1:8000/property-assessment/municipalities/",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(values),
+        }
+      );
+  
+      if (!createResponse.ok) {
+        throw new Error("Failed to add municipality");
+      }
+  
+      const newMunicipality = await createResponse.json();
+  
+      // Update the list with the newly added municipality
+      setMunicipalities((prev) => [...prev, newMunicipality]);
+  
+      setIsAddModalVisible(false);
+      addForm.resetFields();
+      alert("Municipality added successfully!");
+    } catch (error) {
+      console.error("Error adding municipality:", error);
+      alert("Failed to add municipality.");
+    }
+  };
+
   return (
     <div className="p-6 bg-blue-100 min-h-screen">
+      <Modal
+        title="Add Municipality"
+        open={isAddModalVisible}
+        onCancel={() => {
+          setIsAddModalVisible(false);
+          addForm.resetFields();
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => setIsAddModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button key="submit" type="primary" onClick={() => addForm.submit()}>
+            Add Municipality
+          </Button>,
+        ]}
+      >
+        <Form form={addForm} layout="vertical" onFinish={handleAddMunicipality}>
+          <Form.Item
+            label="Municipal Name"
+            name="municipal_name"
+            rules={[{ required: true, message: "Please enter the municipal name" }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item
+            label="Municipal Rate"
+            name="municipal_rate"
+            rules={[{ required: true, message: "Please enter the municipal rate" }]}
+          >
+            <InputNumber min={0} step={0.01} style={{ width: "100%" }} />
+          </Form.Item>
+
+          <Form.Item
+            label="Education Rate"
+            name="education_rate"
+            rules={[{ required: true, message: "Please enter the education rate" }]}
+          >
+            <InputNumber min={0} step={0.01} style={{ width: "100%" }} />
+          </Form.Item>
+        </Form>
+      </Modal>
       <Modal
         title="Edit Municipality"
         open={isEditModalVisible}
@@ -305,9 +412,17 @@ const Municipalities: React.FC = () => {
             </button>
           </div>
         </div>
-        <button className="mb-4 bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition">
-          Import from CSV
-        </button>
+        <div className="flex space-x-4">
+          <button className="mb-4 bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition">
+            Import from CSV
+          </button>
+          <button
+            onClick={() => setIsAddModalVisible(true)}
+            className="mb-4 bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition"
+          >
+            Add a Municipality
+          </button>
+        </div>
         <div className="overflow-x-auto border border-gray-300 rounded-lg max-h-[78vh] overflow-y-auto">
           <table className="min-w-full border border-gray-300 rounded-lg">
             <thead className="bg-gray-200 text-gray-700">
