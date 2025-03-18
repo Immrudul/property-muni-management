@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import { Modal, InputNumber, Select, Button, Form } from "antd";
+import { Modal, InputNumber, Select, Button, Form, Input} from "antd";
 
 // Define TypeScript interface for a Property
 interface Property {
@@ -26,6 +26,14 @@ const Properties: React.FC = () => {
   const [updatedAssessmentValue, setUpdatedAssessmentValue] = useState<number | null>(null);
   const [selectedMunicipal, setSelectedMunicipal] = useState<number | null>(null);
   const [municipalities, setMunicipalities] = useState<{ municipal_id: number, municipal_name: string }[]>([]);
+
+  // State for adding a new property
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [newAssessmentRollNumber, setNewAssessmentRollNumber] = useState("");
+  const [newAssessmentValue, setNewAssessmentValue] = useState<number | null>(null);
+  const [newMunicipal, setNewMunicipal] = useState<number | null>(null);
+  const [isCheckingUnique, setIsCheckingUnique] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
 
   useEffect(() => {
@@ -72,6 +80,95 @@ const Properties: React.FC = () => {
     fetchProperties();
     fetchMunicipalities();
   }, [auth.token]);
+
+  const checkUniqueAssessmentRoll = async () => {
+    if (!newAssessmentRollNumber) return;
+    setIsCheckingUnique(true);
+  
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/property-assessment/properties/?assessment_roll_number=${newAssessmentRollNumber}`,
+        {
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+  
+      const data = await response.json();
+  
+      // Ensure the check only matches exactly
+      const isDuplicate = data.some(
+        (property: Property) => property.assessment_roll_number === newAssessmentRollNumber
+      );
+  
+      if (isDuplicate) {
+        alert("Assessment Roll Number already exists!");
+        return false;
+      } else {
+        alert("Assessment Roll Number is unique.");
+        return true;
+      }
+    } catch (error) {
+      console.error("Error checking uniqueness:", error);
+      return false;
+    } finally {
+      setIsCheckingUnique(false);
+    }
+  };
+
+  const handleAddProperty = async () => {
+    if (!newAssessmentRollNumber || !newAssessmentValue || !newMunicipal) {
+      alert("All fields are required!");
+      return;
+    }
+  
+    setIsSubmitting(true);
+  
+    const isUnique = await checkUniqueAssessmentRoll();
+    if (!isUnique) {
+      setIsSubmitting(false);
+      return;
+    }
+  
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/property-assessment/properties/",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            assessment_roll_number: newAssessmentRollNumber,
+            assessment_value: newAssessmentValue,
+            municipal_id: newMunicipal,
+          }),
+        }
+      );
+  
+      if (!response.ok) {
+        throw new Error("Failed to add property");
+      }
+  
+      const newProperty = await response.json();
+  
+      setProperties((prev) => [...prev, newProperty]);
+  
+      alert("Property added successfully!");
+      setIsAddModalVisible(false);
+      setNewAssessmentRollNumber("");
+      setNewAssessmentValue(null);
+      setNewMunicipal(null);
+    } catch (error) {
+      console.error("Error adding property:", error);
+      alert("Failed to add property.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   
 
   // Toggle row expansion
@@ -212,6 +309,54 @@ const Properties: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+      <Modal
+        title="Add New Property"
+        visible={isAddModalVisible}
+        onCancel={() => setIsAddModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setIsAddModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button key="submit" type="primary" onClick={handleAddProperty} loading={isSubmitting}>
+            Add Property
+          </Button>,
+        ]}
+      >
+        <Form layout="vertical">
+          <Form.Item label="Assessment Roll Number">
+            <Input
+              value={newAssessmentRollNumber}
+              onChange={(e) => setNewAssessmentRollNumber(e.target.value)}
+              placeholder="Enter assessment roll number"
+              style={{ width: "100%" }}
+            />
+            <Button onClick={checkUniqueAssessmentRoll} disabled={isCheckingUnique}>
+              Check Availability
+            </Button>
+          </Form.Item>
+          <Form.Item label="Assessment Value">
+            <InputNumber
+              value={newAssessmentValue}
+              onChange={(value) => setNewAssessmentValue(value!)}
+              min={0}
+              style={{ width: "100%" }}
+            />
+          </Form.Item>
+          <Form.Item label="Municipality">
+            <Select
+              value={newMunicipal}
+              onChange={(value) => setNewMunicipal(value)}
+              style={{ width: "100%" }}
+            >
+              {municipalities.map((municipal) => (
+                <Select.Option key={municipal.municipal_id} value={municipal.municipal_id}>
+                  {municipal.municipal_name}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
       <div className="bg-white shadow-lg rounded-lg p-6">
       <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Properties</h2>
@@ -244,7 +389,10 @@ const Properties: React.FC = () => {
           <button className="mb-4 bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition">
             Import from CSV
           </button>
-          <button className="mb-4 bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition">
+          <button
+            onClick={() => setIsAddModalVisible(true)}
+            className="mb-4 bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition"
+          >
             Add a Property
           </button>
         </div>
