@@ -17,3 +17,5 @@ Follow these steps to get the project running locally:
 ```bash
 git clone <your-forked-repo-url>
 cd <project-directory>
+
+tret
