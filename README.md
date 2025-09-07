@@ -13,7 +13,7 @@ A full-stack web application for managing property assessments, built using:
 1. Clone this repository to your local machine:
 
    ```bash
-   git clone https://github.com/Immrudul/pochmann-ai.git
+   git clone https://github.com/Immrudul/property-muni-management
 
 2. Create and activate a venv
    ```bash
